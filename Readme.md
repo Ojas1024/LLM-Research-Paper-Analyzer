@@ -11,6 +11,7 @@ ResearchXplain is a sophisticated web platform designed to accelerate the academ
 -----
 
 ## Project Demo
+The project is available at [https://research.xplainnn.com/](https://research.xplainnn.com/)
 
 
 -----

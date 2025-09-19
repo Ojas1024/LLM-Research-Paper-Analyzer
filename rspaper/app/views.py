@@ -39,7 +39,7 @@ User = get_user_model()
 
 import faiss # Make sure to import faiss at the top
 
-def find_similar_papers(query_text, top_k=5):
+def find_similar_papers(query_text, top_k=5, user=None):
 
     faiss_path = os.path.join(settings.MEDIA_ROOT, "faiss.index")
     meta_path = os.path.join(settings.MEDIA_ROOT, "faiss_meta.json")
@@ -61,7 +61,7 @@ def find_similar_papers(query_text, top_k=5):
         
         preserved_order = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(found_paper_ids)])
         
-        similar_papers = ResearchPaper.objects.filter(id__in=found_paper_ids).order_by(preserved_order)
+        similar_papers = ResearchPaper.objects.filter(id__in=found_paper_ids, user=user).order_by(preserved_order)
         return list(similar_papers)
 
     except Exception as e:
@@ -468,7 +468,7 @@ def upload_paper_view(request):
 
 @login_required
 def paper_detail_view(request, paper_id):
-    paper = get_object_or_404(ResearchPaper, id=paper_id)
+    paper = get_object_or_404(ResearchPaper, id=paper_id, user=request.user)
     summary = getattr(paper, "summary", None)
     return render(request, "paper_detail.html", {"paper": paper, "summary": summary})
 
@@ -481,7 +481,6 @@ def summarize_paper_view(request, paper_id):
         messages.info(request, "Displaying existing summary.")
         return render(request, "paper_summary.html", {"paper": paper, "summary": summary})
 
-    # If no summary exists, or the existing one failed, generate a new one.
     messages.info(request, "Generating new summary...")
     try:
         llm_out = call_gemini_summary(paper.extracted_text or "", title=paper.title)
@@ -601,8 +600,8 @@ def search_papers_view(request):
 
     if query:
         # Perform semantic search using our new function
-        results = find_similar_papers(query, top_k=10)
-        
+        results = find_similar_papers(query, top_k=10, user=request.user)
+        print(results)
         # Log the search query
         SearchQuery.objects.create(
             user=request.user, 
